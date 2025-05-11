@@ -44,14 +44,14 @@
     
     header {
       text-align: center;
-      margin-bottom: 2.5rem;
+      margin-bottom: 3.5rem;
       animation: fadeIn 1s ease;
     }
     
     h1 {
       color: var(--primary-color);
       font-size: 2.5rem;
-      margin-bottom: 0.5rem;
+      margin-bottom: 1.5rem;
       font-weight: 700;
       position: relative;
       display: inline-block;
@@ -60,23 +60,23 @@
     h1::after {
       content: '';
       position: absolute;
-      bottom: -10px;
+      bottom: 0px;
       right: 0;
-      width: 70%;
+      width: 100%;
       height: 4px;
       background: var(--accent-color);
       border-radius: 2px;
     }
     
     .description {
-      color: #555;
+      color: #3a6cf4;
       font-size: 1.1rem;
       max-width: 600px;
       margin: 0 auto;
     }
     
     .controls {
-      background: white;
+      background: #191970;
       padding: 1.5rem;
       border-radius: var(--border-radius);
       box-shadow: var(--box-shadow);
@@ -96,7 +96,7 @@
       border: 2px solid #e9ecef;
       border-radius: var(--border-radius);
       font-family: 'Tajawal', sans-serif;
-      font-size: 1rem;
+      font-size: 2rem;
       transition: var(--transition);
       width: 100%;
     }
@@ -147,6 +147,9 @@
       text-align: center;
       font-size: 1.2rem;
       font-weight: 700;
+    }
+    .mm{
+      color: #e9ecef;
     }
     
     .city-name {
@@ -291,6 +294,7 @@
           <option value="السويداء">السويداء</option>
           <option value="درعا">درعا</option>
           <option value="القنيطرة">القنيطرة</option>
+          <option value="ادلب">ادلب</option>
           <option value="">أخرى...</option>
         </select>
         
@@ -303,7 +307,7 @@
       
       <div class="loader" id="loader">
         <div class="spinner"></div>
-        <p>جاري تحميل البيانات...</p>
+        <p class="mm">جاري تحميل البيانات...</p>
       </div>
     </div>
     
