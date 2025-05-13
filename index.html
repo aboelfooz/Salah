@@ -172,6 +172,19 @@
       display: flex;
       flex-direction: column;
       gap: 0.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .prayer-header::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+      animation: pulse 8s infinite linear;
     }
     
     .city-name {
@@ -182,6 +195,8 @@
       align-items: center;
       justify-content: center;
       gap: 0.5rem;
+      position: relative;
+      z-index: 1;
     }
     
     .date {
@@ -191,6 +206,27 @@
       align-items: center;
       justify-content: center;
       gap: 0.5rem;
+      position: relative;
+      z-index: 1;
+    }
+    
+    .next-prayer {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      margin-top: 0.5rem;
+      font-size: 0.9rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      position: relative;
+      z-index: 1;
+      backdrop-filter: blur(5px);
+    }
+    
+    .next-prayer .time-left {
+      font-weight: 700;
+      color: #fef08a;
     }
     
     .prayer-grid {
@@ -267,6 +303,12 @@
       font-size: 1.8rem;
       margin-bottom: 0.8rem;
       opacity: 0.8;
+      transition: var(--transition);
+    }
+    
+    .prayer-card:hover .prayer-icon {
+      transform: scale(1.1);
+      opacity: 1;
     }
     
     .current {
@@ -351,6 +393,16 @@
       }
     }
     
+    @keyframes pulse {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-5px); }
+    }
+    
     .loader {
       display: none;
       text-align: center;
@@ -379,6 +431,33 @@
     .asr .prayer-name { color: #fbbf24; }
     .maghrib .prayer-name { color: #fca5a5; }
     .isha .prayer-name { color: #a5b4fc; }
+    
+    /* رسوم متحركة للبطاقات */
+    .prayer-card {
+      animation: fadeInUp 0.5s ease forwards;
+      opacity: 0;
+    }
+    
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    /* تأخير ظهور البطاقات واحدة تلو الأخرى */
+    .prayer-card:nth-child(1) { animation-delay: 0.1s; }
+    .prayer-card:nth-child(2) { animation-delay: 0.2s; }
+    .prayer-card:nth-child(3) { animation-delay: 0.3s; }
+    .prayer-card:nth-child(4) { animation-delay: 0.4s; }
+    .prayer-card:nth-child(5) { animation-delay: 0.5s; }
+    .prayer-card:nth-child(6) { animation-delay: 0.6s; }
+    .prayer-card:nth-child(7) { animation-delay: 0.7s; }
+    .prayer-card:nth-child(8) { animation-delay: 0.8s; }
   </style>
 </head>
 <body>
@@ -411,7 +490,7 @@
           <option value="">أخرى...</option>
         </select>
         
-        <input type="text" id="customCity" placeholder="أدخل اسم المدينة" style="display: none;">
+        <input type="text" id="customCity" placeholder="أدخل اسم المدينة">
       </div>
       
       <button onclick="getPrayerTimes()">
@@ -434,6 +513,10 @@
         <div class="date" id="hijriDate">
           <i class="fas fa-calendar-days"></i>
           <span id="dateText">التاريخ الهجري</span>
+        </div>
+        <div class="next-prayer" id="nextPrayer">
+          <i class="fas fa-clock"></i>
+          <span id="nextPrayerText">الصلاة القادمة: <span class="time-left" id="timeLeft"></span></span>
         </div>
       </div>
       
@@ -458,11 +541,11 @@
     const hijriDate = document.getElementById("dateText");
     const prayerGrid = document.getElementById("prayerGrid");
     const buttonText = document.getElementById("buttonText");
+    const nextPrayerText = document.getElementById("nextPrayerText");
+    const timeLeft = document.getElementById("timeLeft");
 
-    // إظهار/إخفاء حقل المدينة المخصصة
-    select.addEventListener("change", () => {
-      customInput.style.display = select.value === "" ? "block" : "none";
-    });
+    // إظهار حقل إدخال المدينة المخصصة بشكل دائم
+    customInput.style.display = "block";
 
     // تحويل الوقت إلى 12 ساعة مع AM/PM
     function convertTo12Hour(time24) {
@@ -473,8 +556,28 @@
       return `${hour}:${minute} ${period}`;
     }
 
-    // تحديد الصلاة الحالية
-    function getCurrentPrayer(timings) {
+    // حساب الوقت المتبقي للصلاة القادمة
+    function calculateTimeLeft(nextPrayerTime) {
+      const now = new Date();
+      const nextTime = new Date();
+      
+      const [hours, minutes] = nextPrayerTime.split(':').map(Number);
+      nextTime.setHours(hours, minutes, 0, 0);
+      
+      // إذا كان وقت الصلاة قد مضى اليوم، نضيف 24 ساعة
+      if (nextTime < now) {
+        nextTime.setDate(nextTime.getDate() + 1);
+      }
+      
+      const diff = nextTime - now;
+      const hoursLeft = Math.floor(diff / (1000 * 60 * 60));
+      const minutesLeft = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      
+      return `${hoursLeft} ساعة و ${minutesLeft} دقيقة`;
+    }
+
+    // تحديد الصلاة الحالية والقادمة
+    function getCurrentAndNextPrayer(timings) {
       const now = new Date();
       const currentTime = now.getHours() * 60 + now.getMinutes();
       
@@ -488,14 +591,22 @@
       };
       
       const prayersOrder = ['Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+      let currentPrayer = 'Isha';
+      let nextPrayer = 'Fajr';
       
       for (let i = prayersOrder.length - 1; i >= 0; i--) {
         if (currentTime >= prayerTimes[prayersOrder[i]]) {
-          return prayersOrder[i];
+          currentPrayer = prayersOrder[i];
+          nextPrayer = prayersOrder[(i + 1) % prayersOrder.length];
+          break;
         }
       }
       
-      return 'Isha'; // إذا كان الوقت بعد العشاء وقبل الفجر
+      return {
+        current: currentPrayer,
+        next: nextPrayer,
+        nextTime: timings[nextPrayer]
+      };
     }
     
     function convertToMinutes(timeStr) {
@@ -523,7 +634,7 @@
 
         if (data.code === 200) {
           const timings = data.data.timings;
-          const currentPrayer = getCurrentPrayer(timings);
+          const { current, next, nextTime } = getCurrentAndNextPrayer(timings);
           
           // حفظ المدينة في التخزين المحلي
           localStorage.setItem("savedCity", city);
@@ -532,24 +643,36 @@
           displayCity.textContent = city;
           hijriDate.textContent = `${data.data.date.hijri.weekday.ar} ${data.data.date.hijri.day} ${data.data.date.hijri.month.ar} ${data.data.date.hijri.year} هـ`;
           
+          // عرض الصلاة القادمة والوقت المتبقي
+          const prayerNames = {
+            Fajr: 'الفجر',
+            Sunrise: 'الشروق',
+            Dhuhr: 'الظهر',
+            Asr: 'العصر',
+            Maghrib: 'المغرب',
+            Isha: 'العشاء'
+          };
+          
+          nextPrayerText.innerHTML = `الصلاة القادمة: ${prayerNames[next]} <span class="time-left" id="timeLeft">${calculateTimeLeft(nextTime)}</span>`;
+          
           // إنشاء بطاقات الصلوات
           prayerGrid.innerHTML = '';
           
           const prayerCards = [
-            { id: 'Fajr', name: 'الفجر', time: timings.Fajr, icon: '🌙' },
-            { id: 'Sunrise', name: 'الشروق', time: timings.Sunrise, icon: '☀️' },
-            { id: 'Dhuhr', name: 'الظهر', time: timings.Dhuhr, icon: '🕌' },
-            { id: 'Asr', name: 'العصر', time: timings.Asr, icon: '⏳' },
-            { id: 'Maghrib', name: 'المغرب', time: timings.Maghrib, icon: '🌅' },
-            { id: 'Isha', name: 'العشاء', time: timings.Isha, icon: '🌟' },
-            { id: 'Imsak', name: 'الإمساك', time: timings.Imsak, icon: '⏱️' },
-            { id: 'Midnight', name: 'منتصف الليل', time: timings.Midnight, icon: '🌃' }
+            { id: 'Fajr', name: 'الفجر', time: timings.Fajr, icon: '<i class="fas fa-moon"></i>' },
+            { id: 'Sunrise', name: 'الشروق', time: timings.Sunrise, icon: '<i class="fas fa-sun"></i>' },
+            { id: 'Dhuhr', name: 'الظهر', time: timings.Dhuhr, icon: '<i class="fas fa-sun"></i>' },
+            { id: 'Asr', name: 'العصر', time: timings.Asr, icon: '<i class="fas fa-clock"></i>' },
+            { id: 'Maghrib', name: 'المغرب', time: timings.Maghrib, icon: '<i class="fas fa-sunset"></i>' },
+            { id: 'Isha', name: 'العشاء', time: timings.Isha, icon: '<i class="fas fa-moon-stars"></i>' },
+            { id: 'Imsak', name: 'الإمساك', time: timings.Imsak, icon: '<i class="fas fa-hand-holding-water"></i>' },
+            { id: 'Midnight', name: 'منتصف الليل', time: timings.Midnight, icon: '<i class="fas fa-clock"></i>' }
           ];
           
           prayerCards.forEach(prayer => {
             if (prayer.time) {
               const card = document.createElement('div');
-              card.className = `prayer-card ${prayer.id.toLowerCase()} ${prayer.id === currentPrayer ? 'current' : ''}`;
+              card.className = `prayer-card ${prayer.id.toLowerCase()} ${prayer.id === current ? 'current' : ''}`;
               
               card.innerHTML = `
                 <div class="prayer-icon">${prayer.icon}</div>
@@ -564,10 +687,12 @@
           // إظهار النتائج
           prayerTimesContainer.style.display = 'block';
           
-          // إضافة تأثير ظهور تدريجي
-          setTimeout(() => {
-            prayerTimesContainer.style.opacity = '1';
-          }, 100);
+          // تحديث الوقت المتبقي كل دقيقة
+          setInterval(() => {
+            const { next, nextTime } = getCurrentAndNextPrayer(timings);
+            timeLeft.textContent = calculateTimeLeft(nextTime);
+          }, 60000);
+          
         } else {
           alert("تعذر جلب بيانات المواقيت. الرجاء التأكد من اسم المدينة والمحاولة مرة أخرى.");
         }
@@ -591,7 +716,6 @@
           select.value = savedCity;
         } else {
           select.value = "";
-          customInput.style.display = "block";
           customInput.value = savedCity;
         }
         
